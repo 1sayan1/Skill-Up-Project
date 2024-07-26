@@ -1,0 +1,19 @@
+{
+    "name": "skill-up-project",
+    "version": "1.0.0",
+    "description": "A sample Node.js project for Jenkins pipeline",
+    "main": "index.js",
+    "scripts": {
+      "start": "node index.js",
+      "build": "echo 'Build command placeholder'"
+    },
+    "author": "Your Name",
+    "license": "ISC",
+    "dependencies": {
+      "express": "^4.17.1"
+    },
+    "devDependencies": {
+      "jest": "^27.0.6"
+    }
+  }
+  
