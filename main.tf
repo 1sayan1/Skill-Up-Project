@@ -7,6 +7,11 @@ terraform {
   }
 }
 
+variable "environment" {
+  description = "The environment to deploy (dev, int, prod)"
+  type        = string
+}
+
 provider "azurerm" {
   features {
     resource_group {
