@@ -1,31 +1,30 @@
-variable "environment" {
-  description = "The environment to deploy (dev, int, prod)"
-  type        = string
-}
-
 variable "resource_group_name" {
-  description = "Name of the resource group"
+  description = "The name of the resource group"
   type        = string
 }
 
 variable "location" {
-  description = "Name of the region"
+  description = "The location of the resource group"
   type        = string
+  default     = "eastus"
 }
 
-variable "vm_size" {
-  description = "Size of the VM"
-  type        = string
+variable "vm_names" {
+  description = "The names of the virtual machines"
+  type        = list(string)
+}
+
+variable "vm_sizes" {
+  description = "The sizes of the virtual machines"
+  type        = list(string)
 }
 
 variable "admin_username" {
-  description = "Admin Username"
+  description = "The admin username for the virtual machine"
   type        = string
-  default     = "user1"
 }
 
 variable "admin_password" {
-  description = "Admin Password"
+  description = "The admin password for the virtual machine"
   type        = string
-  sensitive   = true
 }
