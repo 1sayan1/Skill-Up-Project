@@ -1,5 +1,0 @@
-resource_group_name = "my-resource-group-dev"
-location            = "eastus"
-vm_size             = "Standard_DS1_v2"
-admin_username      = "azureadmin"
-admin_password      = "hayabusa"
