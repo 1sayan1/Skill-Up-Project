@@ -1,134 +1,105 @@
+variable "resource_group_name" {
+  type = string
+}
+
+variable "location" {
+  type = string
+}
+
+variable "prefix" {
+  type = string
+}
+
+variable "admin_username" {
+  type = string
+}
+
+variable "environments" {
+  type = map(object({
+    ssh_public_key_path = string
+  }))
+}
+
 provider "azurerm" {
   features {}
 }
 
-variable "location" {
-  description = "The location of the resource group"
-  type        = string
-}
-
-variable "admin_username" {
-  description = "The admin username for the VM"
-  type        = string
-}
-
-variable "admin_password" {
-  description = "The admin password for the VM"
-  type        = string
-}
-
-variable "environments" {
-  description = "List of environments"
-  type        = list(string)
-  default     = ["dev", "int", "prod"]
-}
-
 resource "azurerm_resource_group" "main" {
-  name     = "my-resource-group"
+  name     = var.resource_group_name
   location = var.location
 }
 
 resource "azurerm_virtual_network" "main" {
-  name                = "my-vnet"
+  name                = "${var.prefix}-vnet"
   address_space       = ["10.0.0.0/16"]
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
 }
 
 resource "azurerm_subnet" "main" {
-  name                 = "my-subnet"
+  name                 = "${var.prefix}-subnet"
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = ["10.0.1.0/24"]
 }
 
 resource "azurerm_public_ip" "main" {
-  for_each = toset(var.environments)
-  name                = "${each.key}-public-ip"
+  count               = length(keys(var.environments))
+  name                = "${var.prefix}-pip-${element(keys(var.environments), count.index)}"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
   allocation_method   = "Dynamic"
 }
 
 resource "azurerm_network_interface" "main" {
-  for_each = azurerm_public_ip.main
-  name                = "${each.key}-nic"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
+  count                = length(keys(var.environments))
+  name                 = "${var.prefix}-nic-${element(keys(var.environments), count.index)}"
+  location             = azurerm_resource_group.main.location
+  resource_group_name  = azurerm_resource_group.main.name
 
   ip_configuration {
     name                          = "internal"
     subnet_id                     = azurerm_subnet.main.id
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = each.value.id
+    public_ip_address_id          = azurerm_public_ip.main[count.index].id
   }
 }
 
-resource "azurerm_network_security_group" "main" {
-  name                = "my-nsg"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
+resource "azurerm_linux_virtual_machine" "main" {
+  count                = length(keys(var.environments))
+  name                 = "${var.prefix}-vm-${element(keys(var.environments), count.index)}"
+  location             = azurerm_resource_group.main.location
+  resource_group_name  = azurerm_resource_group.main.name
+  network_interface_ids = [azurerm_network_interface.main[count.index].id]
+  size                 = "Standard_B1s"
+  admin_username       = var.admin_username
 
-  security_rule {
-    name                       = "AllowSSH"
-    priority                   = 1001
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "22"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-}
-
-resource "azurerm_network_interface_security_group_association" "main" {
-  for_each = azurerm_network_interface.main
-  network_interface_id      = each.value.id
-  network_security_group_id = azurerm_network_security_group.main.id
-}
-
-resource "azurerm_virtual_machine" "main" {
-  for_each              = azurerm_network_interface.main
-  name                  = "${each.key}-vm"
-  location              = azurerm_resource_group.main.location
-  resource_group_name   = azurerm_resource_group.main.name
-  network_interface_ids = [each.value.id]
-  vm_size               = "Standard_DS1_v2"
-
-  storage_os_disk {
-    name              = "${each.key}-osdisk"
-    caching           = "ReadWrite"
-    create_option     = "FromImage"
-    managed_disk_type = "Standard_LRS"
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
   }
 
-  storage_image_reference {
+  source_image_reference {
     publisher = "Canonical"
     offer     = "UbuntuServer"
     sku       = "18.04-LTS"
     version   = "latest"
   }
 
-  os_profile {
-    computer_name  = "${each.key}-vm"
-    admin_username = var.admin_username
-    admin_password = var.admin_password
+  admin_ssh_key {
+    username   = var.admin_username
+    public_key = file(var.environments[element(keys(var.environments), count.index)].ssh_public_key_path)
   }
 
-  os_profile_linux_config {
-    disable_password_authentication = false
+  tags = {
+    environment = element(keys(var.environments), count.index)
   }
 }
 
 output "vm_public_ip" {
-  value = { for env, ip in azurerm_public_ip.main : env => ip.ip_address }
+  value = [for ip in azurerm_public_ip.main : ip.ip_address]
 }
 
 output "admin_username" {
   value = var.admin_username
-}
-
-output "admin_password" {
-  value = var.admin_password
 }
