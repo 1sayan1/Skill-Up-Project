@@ -1,7 +1,0 @@
-<<<<<<< HEAD
-=======
-[webservers]
-vm1 ansible_host=dev-vm ansible_user=ubuntu ansible_ssh_private_key_file=/home/user/.ssh/id_rsa
-vm2 ansible_host=int-vm ansible_user=ubuntu ansible_ssh_private_key_file=/home/user/.ssh/id_rsa
-vm3 ansible_host=prod-vm ansible_user=ubuntu ansible_ssh_private_key_file=/home/user/.ssh/id_rsa
->>>>>>> 3eacce841cef409dcf98c3b8eb93042a47beb4c2
