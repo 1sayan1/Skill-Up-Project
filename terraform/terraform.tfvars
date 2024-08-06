@@ -1,7 +1,8 @@
 resource_group_name = "my-resource-group"
-location = "westeurope"
+location = "westus"
 prefix = "myapp"
 admin_username = "adminuser"
+admin_password = "Sayan@1993"  # Add this line
 
 environments = {
   dev = {
