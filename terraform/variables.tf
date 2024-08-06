@@ -18,6 +18,11 @@ variable "admin_username" {
   type        = string
 }
 
+variable "admin_password" {
+  description = "The admin password for the VMs."
+  type        = string
+}
+
 variable "environments" {
   description = "A map of environments with SSH public key paths."
   type = map(object({
