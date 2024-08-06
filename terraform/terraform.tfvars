@@ -1,4 +1,4 @@
-resource_group_name = "my-resource-group"
+resource_group_name = "my-resource-group1"
 location = "westus"
 prefix = "myapp"
 admin_username = "adminuser"
