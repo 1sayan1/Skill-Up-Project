@@ -2,23 +2,57 @@ provider "azurerm" {
   features {}
 }
 
+variable "resource_group_name" {
+  description = "The name of the resource group."
+  type        = string
+}
+
+variable "location" {
+  description = "The Azure region where resources will be created."
+  type        = string
+}
+
+variable "prefix" {
+  description = "Prefix for resource names."
+  type        = string
+}
+
+variable "admin_username" {
+  description = "The admin username for the VMs."
+  type        = string
+}
+
+variable "admin_password" {
+  description = "The admin password for the VMs."
+  type        = string
+}
+
+variable "environments" {
+  description = "A map of environments with SSH public key paths."
+  type = map(object({
+    ssh_public_key_path = string
+  }))
+}
+
 resource "azurerm_resource_group" "main" {
   name     = var.resource_group_name
   location = var.location
 }
 
 resource "azurerm_virtual_network" "main" {
-  name                = "${var.prefix}-vnet"
-  address_space       = ["10.0.0.0/16"]
+  count               = length(keys(var.environments))
+  name                = "${var.prefix}-vnet-${element(keys(var.environments), count.index)}"
+  address_space       = ["10.0.${count.index}.0/24"]
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
 }
 
 resource "azurerm_subnet" "main" {
-  name                 = "${var.prefix}-subnet"
+  count                = length(keys(var.environments))
+  name                 = "${var.prefix}-subnet-${element(keys(var.environments), count.index)}"
   resource_group_name  = azurerm_resource_group.main.name
-  virtual_network_name = azurerm_virtual_network.main.name
-  address_prefixes     = ["10.0.1.0/24"]
+  virtual_network_name = azurerm_virtual_network.main[count.index].name
+  address_prefixes     = ["10.0.${count.index}.0/24"]
 }
 
 resource "azurerm_public_ip" "main" {
@@ -37,7 +71,7 @@ resource "azurerm_network_interface" "main" {
 
   ip_configuration {
     name                          = "internal"
-    subnet_id                     = azurerm_subnet.main.id
+    subnet_id                     = azurerm_subnet.main[count.index].id
     private_ip_address_allocation = "Dynamic"
     public_ip_address_id          = azurerm_public_ip.main[count.index].id
   }
@@ -51,6 +85,7 @@ resource "azurerm_linux_virtual_machine" "main" {
   network_interface_ids = [azurerm_network_interface.main[count.index].id]
   size                 = "Standard_B1s"
   admin_username       = var.admin_username
+  admin_password       = var.admin_password
 
   os_disk {
     caching              = "ReadWrite"
@@ -80,4 +115,8 @@ output "vm_public_ip" {
 
 output "admin_username" {
   value = var.admin_username
+}
+
+output "admin_password" {
+  value = var.admin_password
 }
